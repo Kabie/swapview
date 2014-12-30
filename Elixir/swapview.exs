@@ -1,12 +1,11 @@
 #!/usr/bin/env elixir
 
 defmodule Swapview do
-  use Bitwise
 
   @regex_swap ~r/Swap:\s*(\d+)/
 
   defp filter_pid(dir) do
-    dir =~ ~r"\A\d+\z" && File.dir?(dir)
+    dir =~ ~r"\A\d+\z"
   end
 
   defp read_smaps(pid) do
@@ -29,7 +28,8 @@ defmodule Swapview do
     @regex_swap
     |> Regex.scan(content)
     |> Enum.map(fn
-      [_, size] -> String.to_integer(size)
+      [_, size] ->
+        String.to_integer(size)
     end)
     |> Enum.reduce(0, &+/2)
   end
@@ -41,9 +41,9 @@ defmodule Swapview do
     "#{pid |> String.rjust(5)} #{size |> format_size |> String.rjust(9)} #{cmd}"
   end
 
-  defp format_size(size), do: format_size(size, ~w(B KiB MiB GiB TiB))
-  defp format_size(size, [_|units]) when size > 1100, do: format_size(size >>> 10, units)
-  defp format_size(size, [unit|_]), do: "#{size}#{unit}"
+  defp format_size(size), do: format_size(size * 1024.0, ~w(B KiB MiB GiB TiB))
+  defp format_size(size, [_|units]) when size > 1100, do: format_size(size / 1024, units)
+  defp format_size(size, [unit|_]), do: "#{Float.round(size, 1)}#{unit}"
   
   def main do
     IO.puts "  PID      SWAP COMMAND"
@@ -63,4 +63,5 @@ defmodule Swapview do
   end
   
 end
+
 
