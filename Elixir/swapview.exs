@@ -50,7 +50,8 @@ defmodule Swapview do
     "/proc"
     |> File.cd!(fn ->
       total = File.ls!
-      |> Enum.filter_map(&filter_pid/1, &read_smaps/1)
+      |> Enum.filter_map(&filter_pid/1, &Task.async(fn -> read_smaps(&1) end))
+      |> Enum.map(&Task.await/1)
       |> Enum.filter(&filter_zero/1)
       |> Enum.sort_by(fn {_, size, _} -> size end)
       |> Enum.reduce(0, fn {_, size, _} = result, acc ->
