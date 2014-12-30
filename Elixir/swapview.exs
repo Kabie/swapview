@@ -47,21 +47,19 @@ defmodule Swapview do
   
   def main do
     IO.puts "  PID      SWAP COMMAND"
-    "/proc"
-    |> File.cd!(fn ->
-      total = File.ls!
-      |> Enum.filter_map(&filter_pid/1, &Task.async(fn -> read_smaps(&1) end))
-      |> Enum.map(&Task.await/1)
-      |> Enum.filter(&filter_zero/1)
-      |> Enum.sort_by(fn {_, size, _} -> size end)
-      |> Enum.reduce(0, fn {_, size, _} = result, acc ->
-        result
-        |> format_line
-        |> IO.puts
-        size + acc
-      end)
-      IO.puts "Total: #{total |> format_size}"
+    total = "/proc"
+    |> File.ls!
+    |> Enum.filter_map(&filter_pid/1, &Task.async(fn -> read_smaps(&1) end))
+    |> Enum.map(&Task.await/1)
+    |> Enum.filter(&filter_zero/1)
+    |> Enum.sort_by(fn {_, size, _} -> size end)
+    |> Enum.reduce(0, fn {_, size, _} = result, acc ->
+      result
+      |> format_line
+      |> IO.puts
+      size + acc
     end)
+    IO.puts "Total: #{total |> format_size}"
   end
   
 end
