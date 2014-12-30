@@ -3,10 +3,10 @@
 defmodule Swapview do
   use Bitwise
 
-  @regex_swap ~r/Swap:\s*(\d+)/
+  @regex_swap ~r/\w+:\s*(\d+)/
 
   defp filter_pid(dir) do
-    Regex.match?(~r"\A\d+\z", dir) && File.dir?(dir)
+    dir =~ ~r"\A\d+\z" && File.dir?(dir)
   end
 
   defp read_smaps(pid) do
@@ -45,13 +45,14 @@ defmodule Swapview do
   defp format_size(size, [_|units]) when size > 1100, do: format_size(size >>> 10, units)
   defp format_size(size, [unit|_]), do: "#{size}#{unit}"
   
-  def run do
+  def main do
     IO.puts "  PID      SWAP COMMAND"
     "/proc"
     |> File.cd!(fn ->
       total = File.ls!
       |> Enum.filter_map(&filter_pid/1, &read_smaps/1)
       |> Enum.filter(&filter_zero/1)
+      |> Enum.sort_by(fn {_, size, _} -> size end)
       |> Enum.reduce(0, fn {_, size, _} = result, acc ->
         result
         |> format_line
@@ -64,4 +65,4 @@ defmodule Swapview do
   
 end
 
-Swapview.run
+Swapview.main
