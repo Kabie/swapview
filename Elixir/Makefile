@@ -2,7 +2,7 @@
 run: Elixir.Swapview.beam
 	elixir -e 'Swapview.main'
 
-Elixir.Swapview.beam:
+Elixir.Swapview.beam: swapview.exs
 	elixirc swapview.exs
 
 clean:
