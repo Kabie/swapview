@@ -3,7 +3,7 @@
 defmodule Swapview do
   use Bitwise
 
-  @regex_swap ~r/\w+:\s*(\d+)/
+  @regex_swap ~r/Swap:\s*(\d+)/
 
   defp filter_pid(dir) do
     dir =~ ~r"\A\d+\z" && File.dir?(dir)
