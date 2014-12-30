@@ -66,4 +66,3 @@ defmodule Swapview do
   
 end
 
-Swapview.main
