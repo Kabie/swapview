@@ -1,23 +1,31 @@
 #!/usr/bin/env elixir
 
 defmodule Swapview do
+  use Bitwise
 
   @regex_swap ~r/Swap:\s*(\d+)/
 
-  def filter_pid(dir) do
+  defp filter_pid(dir) do
     Regex.match?(~r"\A\d+\z", dir) && File.dir?(dir)
   end
 
-  def read_smaps(pid) do
-    "/proc/#{pid}/smaps"
+  defp read_smaps(pid) do
+    cmd = "/proc/#{pid}/cmdline"
     |> File.open!
     |> IO.read(:all)
+
+    "/proc/#{pid}/smaps"
+    |> File.open!([:read], fn file ->
+      file
+      |> IO.read(:all)
+      |> (fn
+        {:error, _} -> {pid, 0, cmd}
+        content -> {pid, get_swap_size(content), cmd}
+      end).()
+    end)
   end
 
-  def filter_error({:error, _}), do: false
-  def filter_error(_), do: true
-
-  def get_swap_size(content) do
+  defp get_swap_size(content) do
     @regex_swap
     |> Regex.scan(content)
     |> Enum.map(fn
@@ -26,26 +34,31 @@ defmodule Swapview do
     |> Enum.reduce(0, &+/2)
   end
 
-  def filter_zero(0), do: false
-  def filter_zero(_), do: true
+  defp filter_zero({_, 0, _}), do: false
+  defp filter_zero(_), do: true
 
-  def format_line(n) do
-    n
+  defp format_line({pid, size, cmd}) do
+    "#{pid |> String.rjust(5)} #{size |> format_size |> String.rjust(9)} #{cmd}"
   end
 
-  def reduce_result(result, acc) do
-    [result | acc]
-  end
+  defp format_size(size), do: format_size(size, ~w(B KiB MiB GiB TiB))
+  defp format_size(size, [_|units]) when size > 1100, do: format_size(size >>> 10, units)
+  defp format_size(size, [unit|_]), do: "#{size}#{unit}"
   
   def run do
+    IO.puts "  PID      SWAP COMMAND"
     "/proc"
     |> File.cd!(fn ->
-      File.ls!
+      total = File.ls!
       |> Enum.filter_map(&filter_pid/1, &read_smaps/1)
-      |> Enum.filter_map(&filter_error/1, &get_swap_size/1)
-      |> Enum.filter_map(&filter_zero/1, &format_line/1)
-      |> Enum.reduce([], &reduce_result/2)
-      |> Enum.each(&IO.inspect/1)
+      |> Enum.filter(&filter_zero/1)
+      |> Enum.reduce(0, fn {_, size, _} = result, acc ->
+        result
+        |> format_line
+        |> IO.puts
+        size + acc
+      end)
+      IO.puts "Total: #{total |> format_size}"
     end)
   end
   
